@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.pyo
+
+.venv/
+venv/
+env/
+
+.codex_deps/
+
+*.log
+
+# Local/live SQLite data. Production keeps its own copy on the server.
+planner.db
+planner.db-*
+
+# Deployment archives and secrets.
+*.tar.gz
+*.pem
+id_*

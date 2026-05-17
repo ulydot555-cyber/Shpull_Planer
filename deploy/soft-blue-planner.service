@@ -1,0 +1,15 @@
+[Unit]
+Description=Soft Blue Planner Flask app
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/soft_blue_planner_crud
+Environment=FLASK_APP=app
+Environment=FLASK_ENV=production
+ExecStart=/root/soft_blue_planner_crud/.venv/bin/gunicorn --bind=127.0.0.1:5000 app:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

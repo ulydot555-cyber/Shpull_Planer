@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shpull Soft Blue</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v=static_version) }}">
+</head>
+<body>
+    <div class="page-frame">
+        <aside class="sidebar">
+            <header class="brand">
+                <div class="brand-star" aria-hidden="true">✦</div>
+                <div>
+                    <p>Personal Planner</p>
+                    <strong>shpull Soft Blue</strong>
+                </div>
+            </header>
+
+            <section class="daily-card panel-card">
+                <img class="ornament-corner ornament-corner-left" src="{{ url_for('static', filename='images/decor/ornament-left.png') }}" alt="" aria-hidden="true">
+                <img class="ornament-corner ornament-corner-right" src="{{ url_for('static', filename='images/decor/ornament-left.png') }}" alt="" aria-hidden="true">
+                <img class="ornament-corner ornament-corner-bottom-left" src="{{ url_for('static', filename='images/decor/ornament-left.png') }}" alt="" aria-hidden="true">
+                <img class="ornament-corner ornament-corner-bottom-right" src="{{ url_for('static', filename='images/decor/ornament-left.png') }}" alt="" aria-hidden="true">
+
+
+                <div class="daily-heading-row">
+                    <h1>План на день</h1>
+                    <button class="soft-action-btn" type="button" data-open-create-selected>+ задача</button>
+                </div>
+
+                <div class="day-switcher" aria-label="Переключение выбранного дня">
+                    <button class="day-switch-btn" type="button" data-day-nav="prev" aria-label="Показать предыдущий день">‹</button>
+                    <span id="selectedDayCaption">Выбранный день</span>
+                    <button class="day-switch-btn" type="button" data-day-nav="next" aria-label="Показать следующий день">›</button>
+                    <button class="today-return-btn" type="button" data-go-today>Сегодня</button>
+                </div>
+
+                <div class="date-card">
+                    <div class="date-text">
+                        <span id="selectedWeekday">{{ selected_day.weekday_full }}</span>
+                        <strong id="selectedDayNumber">{{ selected_day.day }}</strong>
+                    </div>
+                    <div class="date-month">
+                        <span id="selectedMonth">{{ selected_day.month_full }}</span>
+                        <small id="selectedYear">{{ selected_day.year }}</small>
+                    </div>
+                    <img
+    class="date-botanical"
+    src="{{ url_for('static', filename='images/decor/date-flowers.png') }}"
+    alt=""
+    aria-hidden="true"
+>
+                </div>
+
+                <div class="today-list">
+                    <h2 id="dailyEventsTitle">Сюжет на сегодня:</h2>
+                    <div class="today-events-scroll" id="dailyEventsList" aria-label="Задачи и события выбранного дня">
+                        {% if today_events %}
+                            {% for event in today_events %}
+                            <div class="task-row daily-event-row" data-event-id="{{ event.id }}" data-event-source="{{ event.source }}">
+                                <input type="checkbox" {% if event.is_done %}checked{% endif %} aria-label="Отметить задачу выполненной">
+                                <span class="daily-event-content">
+                                    <span class="daily-event-meta">
+                                        <time>{{ event.time }}</time>
+                                        {% if event.is_regular %}
+                                        <em>{{ event.counter_label }} {{ event.occurrence_number }}</em>
+                                        {% endif %}
+                                    </span>
+                                    <strong>{{ event.title }}</strong>
+                                    {% if event.note %}
+                                    <small>{{ event.note }}</small>
+                                    {% endif %}
+                                </span>
+                                <span class="row-actions" aria-label="Действия с задачей">
+                                    <button type="button" data-event-action="edit" title="Редактировать">✎</button>
+                                    <button type="button" data-event-action="delete" title="Удалить">×</button>
+                                </span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty-state">На этот день нет задач в календаре.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <blockquote class="sidebar-quote">
+                    <p>Этот день обмену и возврату не подлежит!</p>
+                    <span aria-hidden="true">✿</span>
+                </blockquote>
+
+                <div class="notes-box upcoming-box">
+                    <h2>Грядущее будущее</h2>
+                    <div class="paper-note" id="dailyRemindersList">
+                        {% if selected_day.reminders %}
+                            {% for reminder in selected_day.reminders %}
+                            <p><strong>{{ reminder.title }}</strong> — {{ reminder.date }}, за {{ reminder.days_before }} дн.</p>
+                            {% endfor %}
+                        {% else %}
+                            <p>На выбранный день напоминаний нет.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+
+            <footer class="sidebar-footer">© 2026 Ваш план. Ваш ритм. Ваша история.</footer>
+        </aside>
+
+        <main class="main-area">
+            <nav class="top-nav" aria-label="Основная навигация">
+                <button type="button" class="nav-link active" data-view-link="planner">Планер</button>
+                <button type="button" class="nav-link" data-view-link="notes">Заметки</button>
+                <button type="button" class="nav-link" data-view-link="inspiration">Вдохновение</button>
+                <div class="nav-icons" aria-hidden="true">
+                    <span class="tooltip" data-tooltip="В разработке... То, что ты ищешь, тоже ищет тебя">
+                        <img src="{{ url_for('static', filename='images/decor/search.png') }}" alt="">
+                    </span>
+                    <span class="tooltip" data-tooltip="В разработке... Никогда не пропускай дважды">
+                        <img <img src="{{ url_for('static', filename='images/decor/notice.png') }}" alt="">
+                    </span>
+                    <span class="moon-icon"><img src="{{ url_for('static', filename='images/decor/moon.png') }}" alt=""></span>
+                </div>
+            </nav>
+
+            <div class="app-view is-active" data-view="planner">
+            <section class="hero-section">
+                <div class="hero-copy">
+                    <div class="hero-title-row">
+                        <h2>Неделя в деталях</h2>
+                        <img class="hero-title-picture" src="{{ url_for('static', filename='images/decor/top-picture.png') }}" alt="" aria-hidden="true">
+                    </div>
+                    <div class="title-rule"></div>
+                    <button class="soft-action-btn import-schedule-btn" type="button" data-import-schedule data-schedule-url="{{ schedule_url }}">Импорт расписания</button>
+                    <p>Соберите день по-своему. Наведите на день, чтобы наполнить его планами. Время, заметки и детали задач можно изменить в любой момент.</p>
+                </div>
+            </section>
+
+            <section class="calendar-section" aria-label="Календарь на 7 дней">
+                <button class="scroll-btn scroll-prev" type="button" data-scroll="prev" data-scroll-target="#weekScroller" aria-label="Прокрутить календарь влево">‹</button>
+                <div class="week-scroller" id="weekScroller">
+                    {% for day in week_days %}
+                    <article
+                        class="day-card {% if day.is_today %}is-today{% endif %} {% if day.is_selected %}is-selected{% endif %}"
+                        data-day-index="{{ day.index }}"
+                        data-day-iso="{{ day.iso }}"
+                        role="button"
+                        tabindex="0"
+                        aria-label="Выбрать {{ day.weekday_full }}, {{ day.day }} {{ day.month_full }} {{ day.year }}"
+                    >
+                        <button class="day-add-btn" type="button" data-add-day aria-label="Добавить задачу на {{ day.day }} {{ day.month_full }}">+ Добавить</button>
+
+                        <header class="day-header">
+                            <span class="weekday">{{ day.weekday }}</span>
+                            <div class="day-number">{{ day.day }}</div>
+                            <span class="month">{{ day.month }}</span>
+                            {% if day.is_today %}
+                            <span class="today-marker">◆ Сегодня ◆</span>
+                            {% endif %}
+                            {% if day.is_selected %}
+                            <span class="selected-marker">Выбрано</span>
+                            {% else %}
+                            <span class="selected-marker" hidden>Выбрано</span>
+                            {% endif %}
+                        </header>
+
+                        <div class="events-list">
+                            {% for event in day.events %}
+                            <div class="event-card {% if event.is_regular %}is-regular{% endif %}" data-event-id="{{ event.id }}" data-event-source="{{ event.source }}">
+                                <div class="calendar-event-actions" aria-label="Действия с задачей">
+                                    <button type="button" data-event-action="edit" title="Редактировать">✎</button>
+                                    <button type="button" data-event-action="delete" title="Удалить">×</button>
+                                </div>
+                                <time>{{ event.time }}</time>
+                                <p>{{ event.title }}</p>
+                                {% if event.is_regular %}
+                                <span class="regular-badge">{{ event.counter_label }} {{ event.occurrence_number }}</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <img class="calendar-random-art" src="{{ day.random_art }}" alt="" aria-hidden="true">
+                        <div class="day-art art-{{ day.art }}" aria-hidden="true"></div>
+                    </article>
+                    {% endfor %}
+                </div>
+                <button class="scroll-btn scroll-next" type="button" data-scroll="next" data-scroll-target="#weekScroller" aria-label="Прокрутить календарь вправо">›</button>
+            </section>
+
+            <section class="bottom-panel panel-card" aria-label="Итоги и фокус недели">
+                <article class="bottom-cell quote-cell">
+                    <span class="quote-mark">“</span>
+                    <p>Каждый день — это новая страница вашей истории. Заполняйте её осознанно.</p>
+                    <div class="mini-line"></div>
+                </article>
+
+                <article class="bottom-cell focus-cell">
+                    <h3>Фокус недели</h3>
+                    <p id="weeklyFocusText" class="editable-focus" contenteditable="true" role="textbox" aria-label="Редактировать фокус недели" spellcheck="true">Сконцентрируйтесь на главном. Меньше хаоса — больше смысла.</p>
+                </article>
+
+                <article class="bottom-cell progress-cell">
+                    <img class="progress-picture" src="{{ url_for('static', filename='images/decor/bottom-picture.png') }}" alt="" aria-hidden="true">
+                    <h3>Прогресс месяца</h3>
+                    <div class="progress-content">
+                        <div class="progress-ring" style="--progress: {{ progress }}">
+                            <span>{{ progress }}%</span>
+                        </div>
+                        <div>
+                            <strong>Вы на верном пути.</strong>
+                            <p>Продолжайте в том же духе!</p>
+                            <label class="progress-select-label">
+                                <span>Показывать</span>
+                                <select id="monthProgressSelect" aria-label="Выбрать цель для прогресса месяца">
+                                    {% for goal in global_goals %}
+                                    <option value="{{ goal.id }}" data-progress="{{ goal.progress }}">{{ goal.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </label>
+                            <button class="inline-link-btn" type="button" data-open-view="inspiration">Смотреть цели →</button>
+                        </div>
+                    </div>
+                </article>
+            </section>
+            </div>
+
+            <section class="app-view notes-view" data-view="notes" hidden>
+                <header class="section-head">
+                    <div>
+                        <span>Заметки</span>
+                        <h2>Доска задач по группам</h2>
+                    </div>
+                    <button class="soft-action-btn" type="button" data-create-note-block>+ блок</button>
+                    <button class="soft-action-btn" type="button" data-open-create-selected>+ задача</button>
+                </header>
+                <div class="notes-board" id="notesBoard"></div>
+            </section>
+
+            <section class="app-view inspiration-view" data-view="inspiration" hidden>
+                <header class="inspiration-hero">
+                    <div>
+                        <span>Вдохновение</span>
+                        <h2>Большие планы</h2>
+                        <p>Неделя, месяц и длинные идеи собираются здесь из обычных задач, отмеченных звездочкой.</p>
+                    </div>
+                    <form class="goal-form" id="goalForm">
+                        <input type="hidden" id="goalFormId">
+                        <label>
+                            <span>Цель</span>
+                            <input id="goalTitle" type="text" placeholder="Например, закрыть учебный месяц" required>
+                        </label>
+                        <label>
+                            <span>Период</span>
+                            <select id="goalPeriod">
+                                <option value="week">Неделя</option>
+                                <option value="month" selected>Месяц</option>
+                                <option value="season">Сезон</option>
+                                <option value="year">Год</option>
+                                <option value="other">Другое</option>
+                            </select>
+                        </label>
+                        <label id="goalTargetDateField" hidden>
+                            <span>Дата</span>
+                            <input id="goalTargetDate" type="date">
+                        </label>
+                        <label class="goal-form-wide">
+                            <span>Описание</span>
+                            <textarea id="goalDescription" rows="2" placeholder="Что будет считаться хорошим результатом?"></textarea>
+                        </label>
+                        <label>
+                            <span>Цвет</span>
+                            <input id="goalColor" type="hidden" value="{{ group_color_palette[0] }}">
+                            <div class="color-swatch-grid" data-color-palette="goalColor" aria-label="Выбрать цвет цели"></div>
+                        </label>
+                        <button class="save-btn" type="submit">Сохранить</button>
+                        <button class="ghost-btn" type="button" id="goalFormReset">Очистить</button>
+                    </form>
+                </header>
+                <div class="goals-grid" id="goalsGrid"></div>
+            </section>
+
+            <footer class="main-footer">
+                <a href="#">Настройки</a>
+                <span>|</span>
+                <a href="#">Помощь</a>
+                <span>|</span>
+                <a href="#">Выйти</a>
+            </footer>
+        </main>
+    </div>
+
+    <div class="modal-backdrop" id="taskModal" hidden>
+        <div class="task-modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+            <form id="taskForm">
+                <input type="hidden" id="formMode" value="create">
+                <input type="hidden" id="formSource" value="task">
+                <input type="hidden" id="formDatabaseId">
+                <input type="hidden" id="formOriginalDate">
+
+                <div class="modal-header">
+                    <div>
+                        <span class="modal-kicker">Soft edit</span>
+                        <h2 id="taskModalTitle">Новая задача</h2>
+                    </div>
+                    <button class="modal-close" type="button" data-close-modal aria-label="Закрыть">×</button>
+                </div>
+
+                <div class="form-grid">
+                    <label class="form-field form-field-wide">
+                        <span>Название</span>
+                        <input id="taskTitle" name="title" type="text" placeholder="Например, Английский" required>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Дата</span>
+                        <input id="taskDate" name="date" type="date" required>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Тип</span>
+                        <select id="taskType" name="type">
+                            <option value="task">Разовая задача</option>
+                            <option value="regular">Регулярная задача</option>
+                        </select>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Начало</span>
+                        <input id="taskStartTime" name="start_time" type="time" required>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Конец</span>
+                        <input id="taskEndTime" name="end_time" type="time" required>
+                    </label>
+
+                    <label class="form-field form-field-wide">
+                        <span>Заметка</span>
+                        <textarea id="taskNote" name="note" rows="3" placeholder="Что важно учесть?"></textarea>
+                    </label>
+
+                    <label class="form-field form-field-wide">
+                        <span>Напомнить за дней</span>
+                        <input id="taskReminderDays" name="reminder_days" type="text" placeholder="Например: 1, 3, 7">
+                    </label>
+                    <label class="form-field">
+                        <span>Группа</span>
+                        <input id="taskGroupName" name="group_name" type="text" list="taskGroupsList" placeholder="Учёба / Сессия / Личное">
+                    </label>
+                    <label class="form-field">
+                        <span>Цвет группы</span>
+                        <input id="taskGroupColor" name="group_color" type="hidden" value="{{ group_color_palette[0] }}">
+                        <div class="color-swatch-grid" data-color-palette="taskGroupColor" aria-label="Выбрать цвет группы"></div>
+                    </label>
+                    <label class="form-field">
+                        <span>Приоритет</span>
+                        <select id="taskPriority" name="priority">
+                            <option value="low">Низкий</option>
+                            <option value="normal" selected>Обычный</option>
+                            <option value="high">Высокий</option>
+                        </select>
+                    </label>
+                    <label class="form-field form-field-progress">
+                        <span>Цель прогресса</span>
+                        <select id="taskProgressGoal" name="progress_goal_id">
+                            <option value="">Без цели</option>
+                            {% for goal in global_goals %}
+                            <option value="{{ goal.id }}">{{ goal.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+                    <label class="form-field form-field-toggle">
+                        <input id="taskContributesProgress" name="contributes_progress" type="checkbox">
+                        <span>Двигать прогресс</span>
+                    </label>
+                </div>
+
+                <datalist id="taskGroupsList">
+                    {% for group in task_groups %}
+                    <option value="{{ group.name }}" data-id="{{ group.id }}" data-color="{{ group.color }}"></option>
+                    {% endfor %}
+                </datalist>
+
+                <fieldset class="regular-scope" id="regularScopeBlock" hidden>
+                    <legend>Что изменить?</legend>
+                    <label>
+                        <input type="radio" name="regular_scope" value="occurrence" checked>
+                        Только это занятие
+                    </label>
+                    <label>
+                        <input type="radio" name="regular_scope" value="series">
+                        Всю серию
+                    </label>
+                </fieldset>
+
+                <div class="regular-fields" id="regularFields" hidden>
+                    <label class="form-field">
+                        <span>Повторять по</span>
+                        <select id="regularWeekday" name="weekday">
+                            {% for label in weekday_full_labels %}
+                            <option value="{{ loop.index0 }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </label>
+
+                    <label class="form-field">
+                        <span>Начало серии</span>
+                        <input id="regularStartDate" name="start_date" type="date">
+                    </label>
+
+                    <label class="form-field">
+                        <span>Подпись счётчика</span>
+                        <input id="regularCounterLabel" name="counter_label" type="text" placeholder="урок / занятие / тренировка">
+                    </label>
+
+                    <label class="form-field">
+                        <span id="regularCounterStartLabel">Начало отсчёта</span>
+                        <input id="regularCounterStart" name="counter_start" type="number" min="1" step="1" value="1">
+                    </label>
+                </div>
+
+                <p class="form-hint" id="formHint">Для регулярных задач счётчик считается автоматически от даты начала серии.</p>
+                <p class="form-error" id="formError" hidden></p>
+
+                <div class="modal-actions">
+                    <button class="ghost-btn" type="button" data-close-modal>Отмена</button>
+                    <button class="save-btn" type="submit">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="groupModal" hidden>
+        <div class="task-modal group-modal" role="dialog" aria-modal="true" aria-labelledby="groupModalTitle">
+            <form id="groupForm">
+                <input type="hidden" id="groupFormId">
+                <div class="modal-header">
+                    <div>
+                        <span class="modal-kicker">Task block</span>
+                        <h2 id="groupModalTitle">Блок задач</h2>
+                    </div>
+                    <button class="modal-close" type="button" data-close-group-modal aria-label="Закрыть">×</button>
+                </div>
+                <div class="form-grid group-form-grid">
+                    <label class="form-field form-field-wide">
+                        <span>Название</span>
+                        <input id="groupName" type="text" placeholder="Например, Учёба" required>
+                    </label>
+                    <label class="form-field form-field-wide">
+                        <span>Цвет</span>
+                        <input id="groupColor" type="hidden" value="{{ group_color_palette[0] }}">
+                        <div class="color-swatch-grid" data-color-palette="groupColor" aria-label="Выбрать цвет блока"></div>
+                    </label>
+                </div>
+                <p class="form-error" id="groupFormError" hidden></p>
+                <div class="modal-actions">
+                    <button class="ghost-btn" type="button" data-close-group-modal>Отмена</button>
+                    <button class="save-btn" type="submit">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script id="plannerData" type="application/json">{{ week_days | tojson }}</script>
+    <script id="goalsData" type="application/json">{{ global_goals | tojson }}</script>
+    <script id="colorPaletteData" type="application/json">{{ group_color_palette | tojson }}</script>
+    <script src="{{ url_for('static', filename='js/app.js', v=static_version) }}"></script>
+</body>
+</html>

@@ -58,7 +58,7 @@ def inject_static_version() -> dict[str, int]:
 
 @app.before_request
 def require_login():
-    allowed_endpoints = {"login", "static"}
+    allowed_endpoints = {"health", "login", "static"}
     if request.endpoint in allowed_endpoints or session.get("is_authenticated"):
         return None
 
@@ -391,6 +391,11 @@ def get_safe_next_url() -> str:
     if next_url.startswith("/") and not next_url.startswith("//"):
         return next_url
     return url_for("index")
+
+
+@app.route("/health")
+def health():
+    return jsonify({"ok": True})
 
 
 @app.route("/")

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import re
+import os
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 
 from database import cancel_regular_task_occurrence
 from database import create_global_goal
@@ -35,16 +36,36 @@ from schedule_import import parse_spbstu_schedule
 
 app = Flask(__name__)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "soft-blue-planner-local-secret")
+
+AUTH_LOGIN = "shpull"
+AUTH_PASSWORD = "1234"
 
 
 @app.context_processor
 def inject_static_version() -> dict[str, int]:
-    css_path = Path(app.static_folder or "") / "css" / "style.css"
+    static_root = Path(app.static_folder or "")
+    css_paths = [
+        static_root / "css" / "style.css",
+        static_root / "css" / "auth.css",
+    ]
     try:
-        version = int(css_path.stat().st_mtime)
+        version = max(int(path.stat().st_mtime) for path in css_paths)
     except OSError:
         version = 0
     return {"static_version": version}
+
+
+@app.before_request
+def require_login():
+    allowed_endpoints = {"login", "static"}
+    if request.endpoint in allowed_endpoints or session.get("is_authenticated"):
+        return None
+
+    if request.path.startswith("/api/"):
+        return jsonify({"ok": False, "error": "Нужна авторизация."}), 401
+
+    return redirect(url_for("login", next=request.full_path if request.query_string else request.path))
 
 # База создаётся автоматически при запуске проекта.
 # Файл базы: planner.db в корне проекта.
@@ -365,6 +386,13 @@ def error_response(error: Exception, status: int = 400):
     return jsonify({"ok": False, "error": str(error)}), status
 
 
+def get_safe_next_url() -> str:
+    next_url = request.args.get("next", "")
+    if next_url.startswith("/") and not next_url.startswith("//"):
+        return next_url
+    return url_for("index")
+
+
 @app.route("/")
 def index():
     current_date = get_current_date()
@@ -386,6 +414,30 @@ def index():
         group_color_palette=get_group_color_palette(),
         schedule_url=RUZ_SCHEDULE_URL,
     )
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = ""
+
+    if request.method == "POST":
+        login_value = request.form.get("login", "").strip()
+        password_value = request.form.get("password", "")
+
+        if login_value == AUTH_LOGIN and password_value == AUTH_PASSWORD:
+            session.clear()
+            session["is_authenticated"] = True
+            return redirect(get_safe_next_url())
+
+        error = "Неверный логин или пароль."
+
+    return render_template("auth/login.html", error=error)
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 
 @app.route("/api/calendar")

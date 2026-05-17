@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shpull Planner | Sign in</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css', v=static_version) }}">
+</head>
+<body class="auth-page">
+    <main class="auth-shell" aria-label="Shpull Planner authorization">
+        <section class="auth-card" aria-labelledby="authTitle">
+            <div class="auth-monogram" aria-hidden="true">S</div>
+            <div class="auth-rule" aria-hidden="true"><span></span></div>
+
+            <header class="auth-heading">
+                <p class="auth-brand" id="authTitle">Shpull</p>
+                <p class="auth-product">Planner</p>
+                <p class="auth-gallery">soft daily gallery</p>
+            </header>
+
+            <form class="auth-form" method="post" action="{{ url_for('login', next=request.args.get('next', '')) }}">
+                <label class="auth-field">
+                    <span>Login</span>
+                    <input name="login" type="text" autocomplete="username" placeholder="shpull" required autofocus>
+                </label>
+
+                <label class="auth-field">
+                    <span>Password</span>
+                    <input name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+                </label>
+
+                {% if error %}
+                <p class="auth-error" role="alert">{{ error }}</p>
+                {% endif %}
+
+                <button class="auth-submit" type="submit">
+                    <span>Sign In</span>
+                    <span aria-hidden="true">→</span>
+                </button>
+            </form>
+
+            <footer class="auth-footer">
+                <div class="auth-footer-rule" aria-hidden="true"><span></span></div>
+                <p>your quiet space for plans &amp; rituals</p>
+            </footer>
+        </section>
+    </main>
+</body>
+</html>

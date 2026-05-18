@@ -2682,7 +2682,12 @@ body.modal-open {
 .goal-task-preview {
     display: grid;
     gap: 7px;
+    max-height: 190px;
     margin-top: 14px;
+    padding-right: 6px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
 }
 
 .goal-task {

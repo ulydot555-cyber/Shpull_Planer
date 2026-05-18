@@ -545,8 +545,7 @@ function renderNotesBoard() {
 
 function renderGoalTaskPreview(goal) {
     const tasks = getAllEvents()
-        .filter((event) => String(event.progress_goal_id) === String(goal.id) && event.contributes_progress)
-        .slice(0, 6);
+        .filter((event) => String(event.progress_goal_id) === String(goal.id) && event.contributes_progress);
 
     if (!tasks.length) {
         return '<p class="goal-empty">Отметьте обычные задачи звездочкой, чтобы они появились здесь.</p>';

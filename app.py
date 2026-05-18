@@ -270,6 +270,36 @@ def require_weekday(payload: dict[str, Any]) -> int:
     return weekday
 
 
+def require_weekdays(payload: dict[str, Any]) -> list[int]:
+    raw_value = payload.get("weekdays")
+    if raw_value is None:
+        return [require_weekday(payload)]
+
+    if isinstance(raw_value, str):
+        parts = [part.strip() for part in raw_value.replace(";", ",").split(",")]
+    elif isinstance(raw_value, list):
+        parts = raw_value
+    else:
+        raise ValueError("Поле «дни недели» должно быть списком.")
+
+    weekdays: set[int] = set()
+    for part in parts:
+        if part in ("", None):
+            continue
+        try:
+            weekday = int(part)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Дни недели должны быть целыми числами от 0 до 6.") from exc
+        if weekday < 0 or weekday > 6:
+            raise ValueError("День недели должен быть от 0 до 6.")
+        weekdays.add(weekday)
+
+    if not weekdays:
+        raise ValueError("Выберите хотя бы один день недели для регулярной задачи.")
+
+    return sorted(weekdays)
+
+
 def require_int(payload: dict[str, Any], field: str, label: str) -> int:
     try:
         value = int(payload.get(field, 1))
@@ -371,7 +401,8 @@ def normalise_goal_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 def normalise_regular_payload(payload: dict[str, Any]) -> dict[str, Any]:
     data = normalise_task_payload(payload)
-    data["weekday"] = require_weekday(payload)
+    data["weekdays"] = require_weekdays(payload)
+    data["weekday"] = data["weekdays"][0]
     data["start_date"] = require_date(payload, "start_date", "дата начала серии")
     data["counter_label"] = str(payload.get("counter_label", "раз")).strip() or "раз"
     data["counter_start"] = require_int(payload, "counter_start", "начало отсчёта")

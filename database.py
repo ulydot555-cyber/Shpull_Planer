@@ -92,6 +92,7 @@ def create_schema(conn: sqlite3.Connection) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             weekday INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6),
+            weekdays TEXT,
             start_time TEXT NOT NULL,
             end_time TEXT NOT NULL,
             start_date TEXT NOT NULL,
@@ -226,6 +227,10 @@ def migrate_schema(conn: sqlite3.Connection) -> None:
             "ALTER TABLE regular_tasks "
             "ADD COLUMN reminder_days TEXT NOT NULL DEFAULT ''"
         )
+
+    if "weekdays" not in regular_columns:
+        conn.execute("ALTER TABLE regular_tasks ADD COLUMN weekdays TEXT")
+        conn.execute("UPDATE regular_tasks SET weekdays = CAST(weekday AS TEXT)")
 
     for column_name, column_sql in (
         ("group_id", "ADD COLUMN group_id INTEGER"),
@@ -466,6 +471,50 @@ def decode_reminder_days(value: str | None) -> list[int]:
             result.append(int(part))
 
     return sorted(set(result))
+
+
+def encode_weekdays(values: list[int] | None) -> str:
+    weekdays = sorted(set(int(item) for item in (values or [])))
+    if not weekdays:
+        raise ValueError("Выберите хотя бы один день недели.")
+    if weekdays[0] < 0 or weekdays[-1] > 6:
+        raise ValueError("Дни недели должны быть от 0 до 6.")
+    return ",".join(str(weekday) for weekday in weekdays)
+
+
+def decode_weekdays(value: str | None, fallback: int | None = None) -> list[int]:
+    result: set[int] = set()
+    for part in str(value or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            weekday = int(part)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= weekday <= 6:
+            result.add(weekday)
+
+    if not result and fallback is not None:
+        result.add(int(fallback))
+
+    return sorted(result)
+
+
+def count_weekday_occurrences(start_date: date, end_date: date, weekdays: list[int]) -> int:
+    if end_date < start_date:
+        return 0
+
+    total_days = (end_date - start_date).days + 1
+    full_weeks, remaining_days = divmod(total_days, 7)
+    count = full_weeks * len(weekdays)
+    weekday_set = set(weekdays)
+
+    for offset in range(remaining_days):
+        if (start_date + timedelta(days=offset)).weekday() in weekday_set:
+            count += 1
+
+    return count
 
 
 def normalise_group_color(color: str | None) -> str:
@@ -747,16 +796,29 @@ def get_one_time_events_for_date(conn: sqlite3.Connection, current_date: date) -
 
 
 def get_regular_occurrence_number(regular_task: sqlite3.Row, current_date: date) -> int | None:
-    weekday = int(regular_task["weekday"])
+    weekdays = decode_weekdays(regular_task["weekdays"], regular_task["weekday"])
+    if current_date.weekday() not in weekdays:
+        return None
+
     start_date = date.fromisoformat(regular_task["start_date"])
-    days_until_first_occurrence = (weekday - start_date.weekday()) % 7
-    first_occurrence_date = start_date + timedelta(days=days_until_first_occurrence)
+
+    if current_date < start_date:
+        return None
+
+    first_occurrence_date = next(
+        (
+            start_date + timedelta(days=offset)
+            for offset in range(7)
+            if (start_date + timedelta(days=offset)).weekday() in weekdays
+        ),
+        start_date,
+    )
 
     if current_date < first_occurrence_date:
         return None
 
     counter_start = int(regular_task["counter_start"])
-    return ((current_date - first_occurrence_date).days // 7) + counter_start
+    return counter_start + count_weekday_occurrences(first_occurrence_date, current_date, weekdays) - 1
 
 
 def get_exception_for_regular_task(
@@ -820,6 +882,7 @@ def regular_row_to_event(
         "contributes_progress": False,
         "progress_goal_title": None,
         "weekday": row["weekday"],
+        "weekdays": decode_weekdays(row["weekdays"], row["weekday"]),
         "series_start_date": row["start_date"],
         "exception_id": exception["id"] if exception is not None else None,
     }
@@ -832,11 +895,10 @@ def get_regular_events_for_date(conn: sqlite3.Connection, current_date: date) ->
         FROM regular_tasks
         LEFT JOIN task_groups ON task_groups.id = regular_tasks.group_id
         WHERE is_active = 1
-          AND weekday = ?
           AND start_date <= ?
         ORDER BY start_time, end_time, id
         """,
-        (current_date.weekday(), current_date.isoformat()),
+        (current_date.isoformat(),),
     ).fetchall()
 
     result = []
@@ -926,7 +988,7 @@ def get_regular_reminders_for_date(conn: sqlite3.Connection, reminder_date: date
     for row in rows:
         for days_before in decode_reminder_days(row["reminder_days"]):
             occurrence_date = reminder_date + timedelta(days=days_before)
-            if occurrence_date.weekday() != int(row["weekday"]):
+            if occurrence_date.weekday() not in decode_weekdays(row["weekdays"], row["weekday"]):
                 continue
             if occurrence_date < date.fromisoformat(row["start_date"]):
                 continue
@@ -1120,12 +1182,13 @@ def create_regular_task(data: dict[str, Any]) -> int:
         cursor = conn.execute(
             """
             INSERT INTO regular_tasks
-                (title, weekday, start_time, end_time, start_date, counter_label, counter_start, note, reminder_days, group_id, priority, is_active)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                (title, weekday, weekdays, start_time, end_time, start_date, counter_label, counter_start, note, reminder_days, group_id, priority, is_active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
             """,
             (
                 data["title"],
-                int(data["weekday"]),
+                int(data["weekdays"][0]),
+                encode_weekdays(data.get("weekdays")),
                 data["start_time"],
                 data["end_time"],
                 data["start_date"],
@@ -1149,6 +1212,7 @@ def update_regular_task(regular_task_id: int, data: dict[str, Any]) -> None:
             UPDATE regular_tasks
             SET title = ?,
                 weekday = ?,
+                weekdays = ?,
                 start_time = ?,
                 end_time = ?,
                 start_date = ?,
@@ -1163,7 +1227,8 @@ def update_regular_task(regular_task_id: int, data: dict[str, Any]) -> None:
             """,
             (
                 data["title"],
-                int(data["weekday"]),
+                int(data["weekdays"][0]),
+                encode_weekdays(data.get("weekdays")),
                 data["start_time"],
                 data["end_time"],
                 data["start_date"],

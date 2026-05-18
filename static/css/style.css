@@ -2221,6 +2221,43 @@ body.modal-open {
     box-shadow: 0 0 0 4px rgba(95, 134, 166, 0.12);
 }
 
+.weekday-choice-group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.weekday-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.weekday-choice-grid label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 0 10px;
+    border: 1px solid rgba(95, 134, 166, 0.26);
+    border-radius: 10px;
+    background: rgba(255, 252, 245, 0.84);
+    color: #4f5357;
+    cursor: pointer;
+}
+
+.weekday-choice-grid input {
+    width: auto;
+    min-height: 0;
+    margin: 0 7px 0 0;
+    padding: 0;
+}
+
+.weekday-choice-grid span {
+    letter-spacing: 0;
+    text-transform: none;
+}
+
 .regular-scope {
     position: relative;
     z-index: 1;
@@ -2305,6 +2342,10 @@ body.modal-open {
     .form-grid,
     .regular-fields {
         grid-template-columns: 1fr;
+    }
+
+    .weekday-choice-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .task-modal {

@@ -34,7 +34,7 @@ const taskProgressGoal = document.querySelector('#taskProgressGoal');
 const taskContributesProgress = document.querySelector('#taskContributesProgress');
 const regularScopeBlock = document.querySelector('#regularScopeBlock');
 const regularFields = document.querySelector('#regularFields');
-const regularWeekday = document.querySelector('#regularWeekday');
+const regularWeekdays = document.querySelector('#regularWeekdays');
 const regularStartDate = document.querySelector('#regularStartDate');
 const regularCounterLabel = document.querySelector('#regularCounterLabel');
 const regularCounterStartLabel = document.querySelector('#regularCounterStartLabel');
@@ -114,18 +114,48 @@ function getDateWeekdayNumber(isoDate) {
     return jsDay === 0 ? 6 : jsDay - 1;
 }
 
-function getFirstOccurrenceDate(startIso, weekday) {
+function getSelectedRegularWeekdays() {
+    return [...(regularWeekdays?.querySelectorAll('input[name="weekdays"]:checked') || [])]
+        .map((input) => Number(input.value))
+        .filter((weekday) => Number.isInteger(weekday) && weekday >= 0 && weekday <= 6)
+        .sort((a, b) => a - b);
+}
+
+function setSelectedRegularWeekdays(weekdays) {
+    const selected = new Set((weekdays || []).map((weekday) => Number(weekday)));
+    regularWeekdays?.querySelectorAll('input[name="weekdays"]').forEach((input) => {
+        input.checked = selected.has(Number(input.value));
+    });
+}
+
+function getFirstOccurrenceDate(startIso, weekdays) {
     const startDate = new Date(`${startIso}T12:00:00`);
-    const daysUntilFirstOccurrence = (Number(weekday) - getDateWeekdayNumber(startIso) + 7) % 7;
-    startDate.setDate(startDate.getDate() + daysUntilFirstOccurrence);
+    const selectedWeekdays = new Set((Array.isArray(weekdays) ? weekdays : [weekdays]).map((weekday) => Number(weekday)));
+    for (let offset = 0; offset < 7; offset += 1) {
+        const candidate = new Date(startDate);
+        candidate.setDate(candidate.getDate() + offset);
+        if (selectedWeekdays.has(getDateWeekdayNumber(candidate.toISOString().slice(0, 10)))) {
+            return candidate;
+        }
+    }
     return startDate;
 }
 
-function getOccurrenceOffset(startIso, weekday, occurrenceIso) {
-    const firstOccurrence = getFirstOccurrenceDate(startIso, weekday);
+function getOccurrenceOffset(startIso, weekdays, occurrenceIso) {
+    const selectedWeekdays = new Set((Array.isArray(weekdays) ? weekdays : [weekdays]).map((weekday) => Number(weekday)));
+    const firstOccurrence = getFirstOccurrenceDate(startIso, [...selectedWeekdays]);
     const occurrenceDate = new Date(`${occurrenceIso}T12:00:00`);
-    const daysBetween = Math.floor((occurrenceDate - firstOccurrence) / 86400000);
-    return daysBetween >= 0 ? Math.floor(daysBetween / 7) : 0;
+    if (occurrenceDate < firstOccurrence) return 0;
+
+    let offset = 0;
+    const cursor = new Date(firstOccurrence);
+    while (cursor < occurrenceDate) {
+        if (selectedWeekdays.has(getDateWeekdayNumber(cursor.toISOString().slice(0, 10)))) {
+            offset += 1;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    return offset;
 }
 
 function formatApiError(error) {
@@ -861,7 +891,7 @@ function openCreateModal(isoDate) {
     taskType.value = 'task';
     taskStartTime.value = '10:00';
     taskEndTime.value = '11:00';
-    regularWeekday.value = String(weekday);
+    setSelectedRegularWeekdays([weekday]);
     regularStartDate.value = isoDate;
     regularCounterLabel.value = 'урок';
     regularCounterStart.value = '1';
@@ -894,7 +924,7 @@ function openEditModal(event) {
 
     if (event.is_regular) {
         regularScopeBlock.hidden = false;
-        regularWeekday.value = String(event.weekday ?? getDateWeekdayNumber(event.date));
+        setSelectedRegularWeekdays(event.weekdays || [event.weekday ?? getDateWeekdayNumber(event.date)]);
         regularStartDate.value = event.series_start_date || event.date;
         regularCounterLabel.value = event.counter_label || 'урок';
         regularCounterStart.value = String(event.occurrence_number || event.counter_start || 1);
@@ -926,7 +956,7 @@ function collectRegularPayload() {
     if (formMode.value === 'edit' && formSource.value === 'regular') {
         const offset = getOccurrenceOffset(
             regularStartDate.value || taskDate.value,
-            Number(regularWeekday.value),
+            getSelectedRegularWeekdays(),
             formOriginalDate.value || taskDate.value
         );
         counterStart -= offset;
@@ -934,7 +964,8 @@ function collectRegularPayload() {
 
     return {
         ...collectTaskPayload(),
-        weekday: Number(regularWeekday.value),
+        weekday: getSelectedRegularWeekdays()[0],
+        weekdays: getSelectedRegularWeekdays(),
         start_date: regularStartDate.value || taskDate.value,
         counter_label: regularCounterLabel.value.trim() || 'раз',
         counter_start: counterStart
@@ -1412,7 +1443,7 @@ document.addEventListener('keydown', (event) => {
 
 taskType?.addEventListener('change', () => {
     if (taskType.value === 'regular') {
-        regularWeekday.value = String(getDateWeekdayNumber(taskDate.value || getSelectedDay().iso));
+        setSelectedRegularWeekdays([getDateWeekdayNumber(taskDate.value || getSelectedDay().iso)]);
         regularStartDate.value = taskDate.value || getSelectedDay().iso;
     }
     setRegularFieldsVisibility();
@@ -1420,7 +1451,7 @@ taskType?.addEventListener('change', () => {
 
 taskDate?.addEventListener('change', () => {
     if (taskType.value === 'regular' && formMode.value === 'create') {
-        regularWeekday.value = String(getDateWeekdayNumber(taskDate.value));
+        setSelectedRegularWeekdays([getDateWeekdayNumber(taskDate.value)]);
         regularStartDate.value = taskDate.value;
     }
 });

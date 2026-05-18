@@ -394,14 +394,17 @@
                 </fieldset>
 
                 <div class="regular-fields" id="regularFields" hidden>
-                    <label class="form-field">
+                    <fieldset class="form-field form-field-wide weekday-choice-group">
                         <span>Повторять по</span>
-                        <select id="regularWeekday" name="weekday">
+                        <div class="weekday-choice-grid" id="regularWeekdays">
                             {% for label in weekday_full_labels %}
-                            <option value="{{ loop.index0 }}">{{ label }}</option>
+                            <label>
+                                <input type="checkbox" name="weekdays" value="{{ loop.index0 }}">
+                                <span>{{ label }}</span>
+                            </label>
                             {% endfor %}
-                        </select>
-                    </label>
+                        </div>
+                    </fieldset>
 
                     <label class="form-field">
                         <span>Начало серии</span>
